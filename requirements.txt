@@ -1,8 +1,19 @@
-scanpy==1.11.5  # pinned: sc.tl.score_genes control-gene selection is version-sensitive (Figure3E, Figure5C)
-pandas>=1.3
-numpy>=1.20
-scipy>=1.7
-matplotlib>=3.4
-seaborn>=0.11
-statsmodels>=0.13
-anndata>=0.8
+# Python dependencies for the IMPACT figure scripts.
+# Versions are pinned exactly to the environment the published figures were generated in, so a
+# fresh install reproduces them rather than tracking upstream releases. Tested on Python 3.12.
+#
+# scanpy in particular must not float: sc.tl.score_genes() selects its control gene bins in a
+# version-sensitive way, which changes the APRIL-responsive module scores in Figure 3E and the
+# IL-1B response scores in Figure 5C.
+
+scanpy==1.11.5
+anndata==0.12.7
+pandas==2.3.3
+numpy==2.3.5
+scipy==1.17.0
+statsmodels==0.14.6
+matplotlib==3.10.8
+seaborn==0.13.2
+h5py==3.15.1
+openpyxl==3.1.5
+requests==2.32.5

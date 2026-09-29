@@ -105,8 +105,10 @@ jit = [rng.normal(pos[i], 0.08, size=len(v)) for i, v in enumerate(data)]
 for k, (nv, tv) in enumerate(pairs):
     xn, xt = jit[2 * k], jit[2 * k + 1]
     for i in range(len(nv)):
-        ax.plot([xn[i], xt[i]], [nv[i], tv[i]], color='#9a9a9a', linewidth=0.25,
-                alpha=0.18, zorder=1)
+        # REVISION (reviewer 2, round 2): darkened from #9a9a9a/0.25/0.18, which was too faint
+        # to follow. The pairing is the design of this panel, so the connectors must be visible.
+        ax.plot([xn[i], xt[i]], [nv[i], tv[i]], color='#666666', linewidth=0.5,
+                alpha=0.45, zorder=1)
 for i, (vals, c) in enumerate(zip(data, colors)):
     ax.scatter(jit[i], vals, s=28, color=c, edgecolor='black', linewidth=0.5, alpha=0.92, zorder=3)
 

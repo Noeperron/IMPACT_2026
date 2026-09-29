@@ -112,14 +112,33 @@ The single-cell objects go anywhere you like; point `SCRNA_DIR` at their directo
 ## Setup
 
 ```bash
-conda create -n impact python=3.10
+conda create -n impact python=3.12
 conda activate impact
-pip install -r requirements.txt      # scanpy==1.11.5, anndata, pandas, numpy, scipy, statsmodels, matplotlib, seaborn
+pip install -r requirements.txt      # exact pinned versions, see the note below
 ```
 
 ```r
-source("environment.R")              # CRAN packages used by the R scripts
+source("environment.R")              # CRAN packages used by the R scripts, pinned
 ```
+
+Both dependency files pin **exact versions**, matching the environment the published figures
+were generated in. This matters beyond tidiness: `scanpy`'s `sc.tl.score_genes()` chooses its
+control gene bins in a version-sensitive way, so an unpinned install changes the module scores
+in Figure 3E and Figure 5C.
+
+Then fetch the data:
+
+```bash
+python3 tools/fetch_zenodo_data.py                  # everything, about 10.4 GB
+python3 tools/fetch_zenodo_data.py --tabular-only   # about 190 MB, skips the single-cell objects
+```
+
+This downloads the deposit and writes each file to the path the scripts expect. The record
+stores files flat, with the directory encoded in the filename (`elisa_elisa_mmr.csv`), and the
+scripts read a nested tree (`data/elisa/elisa_mmr.csv`), so the script unflattens as it goes.
+Checksums are verified, files already present are left alone, and an interrupted run resumes
+where it stopped. `--tabular-only` is enough for every panel except Figure 3B, 3C and 5C and
+Supplementary Figures 2, 3B and 6, which read the single-cell objects.
 
 Then set the data paths:
 
