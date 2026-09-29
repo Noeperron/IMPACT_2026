@@ -7,7 +7,7 @@ Purpose:      The Zenodo record stores every file at the top level with its dire
               record and unflattens it, so no file has to be renamed or moved by hand.
 Inputs:       The Zenodo record, resolved from the concept DOI so it always fetches the latest
               version. Nothing local is required.
-Outputs:      A populated data/ directory (40 files, about 10.4 GB in full, about 190 MB with
+Outputs:      A populated data/ directory (40 files, about 9.7 GB in full, about 61 MB with
               --tabular-only). Existing files whose checksum already matches are left alone,
               so the script is safe to re-run and to resume after an interrupted download.
 Dependencies: Python + requests (standard library otherwise).
@@ -102,7 +102,7 @@ def main():
     ap.add_argument("--token", default=os.environ.get("ZENODO_TOKEN"),
                     help="Zenodo share token, needed while the record is embargoed")
     ap.add_argument("--tabular-only", action="store_true",
-                    help="skip the single-cell .h5ad objects (about 10.2 GB of the 10.4 GB)")
+                    help="skip the single-cell .h5ad objects (about 9.6 GB of the 9.7 GB)")
     ap.add_argument("--dry-run", action="store_true", help="list files without downloading")
     args = ap.parse_args()
 

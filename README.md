@@ -129,8 +129,8 @@ in Figure 3E and Figure 5C.
 Then fetch the data:
 
 ```bash
-python3 tools/fetch_zenodo_data.py                  # everything, about 10.4 GB
-python3 tools/fetch_zenodo_data.py --tabular-only   # about 190 MB, skips the single-cell objects
+python3 tools/fetch_zenodo_data.py                  # everything, about 9.7 GB
+python3 tools/fetch_zenodo_data.py --tabular-only   # about 61 MB, skips the single-cell objects
 ```
 
 This downloads the deposit and writes each file to the path the scripts expect. The record

@@ -25,8 +25,8 @@ The record is resolved from the concept DOI `10.5281/zenodo.18989222`, which alw
 the latest version, so the script does not go stale when a new version is published.
 
 ```bash
-python3 tools/fetch_zenodo_data.py                  # everything, 40 files, about 10.4 GB
-python3 tools/fetch_zenodo_data.py --tabular-only   # about 190 MB, no single-cell objects
+python3 tools/fetch_zenodo_data.py                  # everything, 40 files, about 9.7 GB
+python3 tools/fetch_zenodo_data.py --tabular-only   # about 61 MB, no single-cell objects
 python3 tools/fetch_zenodo_data.py --dry-run        # list what is missing, without downloading
 python3 tools/fetch_zenodo_data.py --dest /data/x   # somewhere other than ./data
 python3 tools/fetch_zenodo_data.py --record 1234567 # a specific version instead of the latest
