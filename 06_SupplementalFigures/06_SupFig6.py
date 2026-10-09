@@ -54,6 +54,9 @@ PLOT_FONT = FONT if FONT in _av else ("Liberation Sans" if "Liberation Sans" in 
 plt.rcParams["font.family"] = PLOT_FONT
 plt.rcParams["svg.fonttype"] = "none"
 
+# REVISION 2026-10-08: italic statistical symbols, a×10^b instead of e-notation, transparent SVG.
+import plot_style as ps
+
 # Reuse the canonical Figure 5C helpers rather than restating them, so the cell-type filter,
 # the untreated-SMM rule and the paired effect size cannot drift between the two figures.
 _spec = importlib.util.spec_from_file_location(
@@ -226,15 +229,15 @@ def main():
                 ax.scatter(1 + jp, pre, s=26, facecolor=PRE, edgecolor="black", linewidth=0.5, zorder=3)
                 ax.scatter(2 + jq, post, s=26, facecolor=POST, edgecolor="black", linewidth=0.5, zorder=3)
                 if pd.notna(row['q']):
-                    lab = f"q={row['q']:.3f}" if row['q'] >= 0.001 else f"q={row['q']:.1e}"
+                    lab = ps.stat('q', row['q'], digits=3, sci_below=0.001)   # REVISION 2026-10-08
                     if row['q'] < 0.1:
-                        lab += f", r={abs(row['effsize']):.2f}"
+                        lab += f", $r$={abs(row['effsize']):.2f}"
                     bar = ymax + 0.08 * span
                     ax.plot([1, 1, 2, 2], [bar - 0.02 * span, bar, bar, bar - 0.02 * span],
                             color="black", linewidth=0.9)
                     ax.text(1.5, bar + 0.03 * span, lab, ha="center", va="bottom", fontsize=11)
                 else:
-                    ax.text(1.5, ymax + 0.10 * span, f'n={len(s)}, too few\nto test', ha='center',
+                    ax.text(1.5, ymax + 0.10 * span, f'$n$={len(s)}, too few\nto test', ha='center',
                             va='bottom', fontsize=8.5, style='italic', color='#555555')
                 ax.set_xticks([1, 2]); ax.set_xticklabels(["Pre", "Post"], fontsize=12)
                 ax.tick_params(axis="y", labelsize=11)
@@ -242,7 +245,7 @@ def main():
                 ax.set_ylim(ymin - 0.05 * span, ymax + 0.32 * span)
             for side in ("top", "right", "bottom", "left"):
                 ax.spines[side].set_visible(True); ax.spines[side].set_color("black")
-            ax.set_title(f"Treatment-naive SMM, {arm.lower()}\n(n={len(s)})", fontsize=12)
+            ax.set_title(f"Treatment-naive SMM, {arm.lower()}\n($n$={len(s)})", fontsize=12)
             if ci == 0 and len(s):
                 ax.set_ylabel("IL-1β response score", fontsize=12)
 
@@ -262,9 +265,9 @@ def main():
     ytop = np.r_[a, b].max() + 0.10 * dspan
     axB.plot([1, 1, 2, 2], [ytop - 0.02 * dspan, ytop, ytop, ytop - 0.02 * dspan],
              color="black", linewidth=0.9)
-    axB.text(1.5, ytop + 0.03 * dspan, f"p={rB['p']:.2f}", ha="center", va="bottom", fontsize=11)
+    axB.text(1.5, ytop + 0.03 * dspan, f"$p$={rB['p']:.2f}", ha="center", va="bottom", fontsize=11)
     axB.set_xticks([1, 2])
-    axB.set_xticklabels([f"Shipped\n(n={n1})", f"Not shipped\n(n={n2})"], fontsize=11)
+    axB.set_xticklabels([f"Shipped\n($n$={n1})", f"Not shipped\n($n$={n2})"], fontsize=11)
     axB.tick_params(axis="y", labelsize=11)
     axB.set_ylabel("Change in IL-1β response\n(post − pre)", fontsize=12)
     axB.set_title("Treatment-naive SMM", fontsize=12)
@@ -279,7 +282,9 @@ def main():
     fig.text(0.02, 0.475, "B", **_tag)
     for ext in ("png", "pdf", "svg"):
         out = FIGURES_DIR / f"SupFig6.{ext}"
-        plt.savefig(out, dpi=300, bbox_inches="tight", facecolor="white")
+        # REVISION 2026-10-08: transparent SVG (no page-sized white box in Inkscape).
+        plt.savefig(out, dpi=300, bbox_inches="tight",
+                    **({"transparent": True} if ext == "svg" else {"facecolor": "white"}))
         if ext == "svg" and PLOT_FONT != FONT:
             t = Path(out).read_text(encoding="utf-8")
             for q in ('"', "'"):

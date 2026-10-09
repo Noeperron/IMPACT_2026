@@ -48,12 +48,17 @@ PLOT_FONT = FONT if FONT in _av else ("Liberation Sans" if "Liberation Sans" in 
 plt.rcParams["font.family"] = PLOT_FONT
 plt.rcParams["svg.fonttype"] = "none"
 
+# REVISION 2026-10-08: italic statistical symbols, a×10^b instead of e-notation, transparent SVG.
+import plot_style as ps
+
 
 def save_figure(basename, dpi=300):
     """Write PNG + PDF + SVG; rewrite the SVG font-family to Arial (see note above)."""
     for ext in ("png", "pdf", "svg"):
         out = FIGURES_DIR / f"{basename}.{ext}"
-        plt.savefig(out, dpi=dpi, bbox_inches="tight", facecolor="white")
+        # REVISION 2026-10-08: transparent SVG (no page-sized white box in Inkscape).
+        plt.savefig(out, dpi=dpi, bbox_inches="tight",
+                    **({"transparent": True} if ext == "svg" else {"facecolor": "white"}))
         if ext == "svg" and PLOT_FONT != FONT:
             t = Path(out).read_text(encoding="utf-8")
             for q in ('"', "'"):
@@ -204,8 +209,9 @@ def main():
             # not have and reads as a placeholder. Anything that would round to 1.00 is reported
             # as ">0.99" instead.
             if v >= 0.995:
-                return f'{sym}>0.99'
-            return f'{sym}={v:.2f}' if v >= 0.01 else f'{sym}={v:.3f}'
+                return f'${sym}$>0.99'
+            # REVISION 2026-10-08: italic p and q.
+            return f'${sym}$={v:.2f}' if v >= 0.01 else f'${sym}$={v:.3f}'
         def _fmt(pv, qv):
             return f'{_one("p", pv)}, {_one("q", qv)}'
         for _j, _grp in enumerate(PLOT_GROUPS[1:], start=1):
@@ -217,11 +223,12 @@ def main():
         ax.set_title(tp, fontsize=14, fontweight='bold', pad=6)
         ax.set_xticks(range(len(PLOT_GROUPS)))
         _disp = {'SMM (Untreated)': 'SMM\nUntreated', 'SMM (Treated)': 'SMM\nTreated'}
-        ax.set_xticklabels([f'{_disp.get(d, d)}\n(n={len(v)})' for d, v in zip(PLOT_GROUPS, box_data)],
+        ax.set_xticklabels([f'{_disp.get(d, d)}\n($n$={len(v)})' for d, v in zip(PLOT_GROUPS, box_data)],
                            fontsize=9.5)
         ax.tick_params(axis='y', labelsize=11)
         if ax_idx == 0:
-            ax.set_ylabel('APRIL Expression\n[log$_2$(CPM+1)]', fontsize=12, fontweight='bold')
+            # REVISION 2026-10-08: the expression values are ln(counts per 10,000 + 1).
+            ax.set_ylabel('APRIL Expression\n[ln(CP10k+1)]', fontsize=12, fontweight='bold')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         ax.set_xlim(-0.5, len(PLOT_GROUPS) - 0.5)

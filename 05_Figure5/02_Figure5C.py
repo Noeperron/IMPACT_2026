@@ -34,6 +34,10 @@ if FONT not in _av:
 PLOT_FONT = FONT if FONT in _av else ("Liberation Sans" if "Liberation Sans" in _av else "sans-serif")
 plt.rcParams["font.family"] = PLOT_FONT
 plt.rcParams["svg.fonttype"] = "none"
+# REVISION 2026-10-08: math text ($q$, $r$, $n$) in the plot font, italic, as in the R panels.
+plt.rcParams["mathtext.fontset"] = "custom"
+plt.rcParams["mathtext.rm"] = PLOT_FONT
+plt.rcParams["mathtext.it"] = f"{PLOT_FONT}:italic"
 import seaborn as sns
 from scipy import stats
 import gc
@@ -193,10 +197,10 @@ def generate_boxplot(paired_df, stats_df, output_path, disease_order=None):
         if len(row) and pd.notna(row["q_value"].iloc[0]):
             q_val = float(row["q_value"].iloc[0])
             eff = row["effsize"].iloc[0] if "effsize" in row else np.nan
-            p_str = f"q={q_val:.3f}" if q_val >= 0.001 else f"q={q_val:.1e}"
+            p_str = f"$q$={q_val:.3f}" if q_val >= 0.001 else f"$q$={q_val:.1e}"
             # effect size only where the comparison is significant, as in the Olink panels
             if q_val < 0.1 and pd.notna(eff):
-                p_str += f", r={abs(eff):.2f}"
+                p_str += f", $r$={abs(eff):.2f}"
             bar_y = ymax + 0.08 * span
             ax.plot([positions[0], positions[0], positions[1], positions[1]],
                     [bar_y - 0.02 * span, bar_y, bar_y, bar_y - 0.02 * span],
@@ -205,21 +209,24 @@ def generate_boxplot(paired_df, stats_df, output_path, disease_order=None):
 
         # Font sizes and the full panel border match theme_bw() in the R panels
         # (axis.text 16, axis.title 18, strip.text 18, panel.border black).
-        ax.set_title(f"{label_map.get(disease, disease)}\n (n={n})", fontsize=18)
+        # REVISION 2026-10-08: larger text (was 18 / 16 / 16 / 13), identical to the R panels.
+        ax.set_title(f"{label_map.get(disease, disease)}\n($n$={n})", fontsize=20)
         ax.set_xticks(positions)
-        ax.set_xticklabels(["Pre", "Post"], fontsize=16)
-        ax.tick_params(axis="y", labelsize=16)
+        ax.set_xticklabels(["Pre", "Post"], fontsize=18)
+        ax.tick_params(axis="y", labelsize=18)
         ax.set_xlim(0.5, 2.5)
         ax.set_ylim(ymin - 0.05 * span, ymax + 0.30 * span)
         for side in ("top", "right", "bottom", "left"):
             ax.spines[side].set_visible(True)
             ax.spines[side].set_color("black")
 
-    axes[0].set_ylabel("IL-1\u03b2 response score\n(immune cells, scRNA-seq)", fontsize=18)
+    # REVISION 2026-10-08: one-line y-axis title at 15 pt, the size used in Figure 5A, B, D-F.
+    axes[0].set_ylabel("IL-1\u03b2 response score", fontsize=15)
     plt.tight_layout()
     for ext in ("png", "pdf", "svg"):
         out = str(output_path).replace(".png", f".{ext}")
-        plt.savefig(out, dpi=300, bbox_inches="tight")
+        # REVISION 2026-10-08: transparent SVG (no white background box in Inkscape).
+        plt.savefig(out, dpi=300, bbox_inches="tight", transparent=(ext == "svg"))
         if ext == "svg" and PLOT_FONT != FONT:
             txt = Path(out).read_text(encoding="utf-8")
             for q in ('"', "'"):

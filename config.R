@@ -68,8 +68,16 @@ save_figure <- function(plot, basename, width, height, dpi = 300, svg = TRUE) {
   if (svg) {
     svg_path <- file.path(FIGURES_DIR, paste0(basename, ".svg"))
     if (requireNamespace("svglite", quietly = TRUE)) {
-      ggplot2::ggsave(svg_path, plot, width = width, height = height, units = "in")
+      # REVISION 2026-10-08: no white background in the SVG. svglite writes a
+      # <rect width='100%' height='100%'> that, once the panel is pasted into a larger
+      # Inkscape page, becomes an invisible page-sized box covering other panels.
+      svg_plot <- if (inherits(plot, "ggplot")) {
+        plot + ggplot2::theme(plot.background = ggplot2::element_rect(fill = NA, colour = NA))
+      } else plot
+      ggplot2::ggsave(svg_path, svg_plot, width = width, height = height, units = "in",
+                      bg = "transparent")
       txt <- readLines(svg_path, warn = FALSE)
+      txt <- txt[!grepl("<rect width='100%' height='100%'", txt, fixed = TRUE)]
       for (q in c('"', "'")) {
         txt <- gsub(paste0("font-family: ", q, "Liberation Sans", q),
                     paste0("font-family: ", FONT), txt, fixed = TRUE)

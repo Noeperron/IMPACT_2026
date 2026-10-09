@@ -38,6 +38,8 @@ import scanpy as sc
 from scipy import io, sparse, stats
 from statsmodels.stats.multitest import multipletests
 import matplotlib.pyplot as plt
+# REVISION 2026-10-08: italic statistical symbols, a×10^b instead of e-notation, transparent SVG.
+import plot_style as ps
 
 SAMPLES = DATA_DIR / 'external' / 'zavidij_bm' / 'matrices'
 TABLES_DIR = REPO_DIR / 'tables'
@@ -89,12 +91,23 @@ def load_sample(d):
     a.obs['Disease'] = disease_of(d.name)
     return a
 
+DEPOSITED = DATA_DIR / 'external' / 'zavidij_bm'
+
+
 def main():
     if not SAMPLES.is_dir():
-        raise SystemExit(
-            f"GSE124310 sample matrices not found at {SAMPLES}.\n"
-            "Download the GSE124310 supplementary file from GEO and extract it there, one "
-            "directory per sample containing matrix.mtx, genes.tsv and barcodes.tsv.")
+        # REVISION 2026-10-08: the GSE124310 matrices are not redistributed. Without them the
+        # panel is redrawn from the per-sample summary and statistics this script writes, which
+        # are deposited in data/external/zavidij_bm/; the plotted values are the same.
+        summary = DEPOSITED / 'zavidij_bm_per_sample_summary.csv'
+        if not summary.exists():
+            raise SystemExit(
+                f"GSE124310 sample matrices not found at {SAMPLES}.\n"
+                "Download the GSE124310 supplementary file from GEO and extract it there, one "
+                "directory per sample containing matrix.mtx, genes.tsv and barcodes.tsv.")
+        print(f"GSE124310 matrices not found; redrawing from {DEPOSITED}")
+        plot_panel(pd.read_csv(summary), pd.read_csv(DEPOSITED / 'zavidij_bm_TNFSF13_stats.csv'))
+        return
     sample_dirs = sorted([p for p in SAMPLES.iterdir() if p.is_dir()])
     print(f"Loading {len(sample_dirs)} samples...")
     adatas = []
@@ -204,6 +217,15 @@ def main():
               f"mean_other={r['mean_other']:.3f} p={r['p']:.4g} q_BH={r['q_BH']:.4g}")
     pd.DataFrame(rows).to_csv(OUT / 'zavidij_bm_TNFSF13_stats.csv', index=False)
 
+    plot_panel(per_sample, pd.DataFrame(rows))
+
+
+def plot_panel(per_sample, stat_df):
+    """Draw the panel from the per-sample summary and the HD-vs-group statistics."""
+    # REVISION 2026-10-08: plotting moved out of main() so that it can also run from the
+    # deposited tables when the GEO matrices are absent.
+    DISEASES = ['HD', 'MGUS', 'SMM', 'MM']
+    by_d = {d: per_sample[per_sample['Disease'] == d]['mean_TNFSF13'].values for d in DISEASES}
     # Figure: tighter layout for a supplementary panel; matches Fig 3C palette
     diag_colors = {'HD': '#3498db', 'MGUS': '#f1c40f', 'SMM': '#e74c3c', 'MM': '#16a085'}
     fig, ax = plt.subplots(figsize=(5.0, 3.6))
@@ -221,7 +243,6 @@ def main():
 
     # Brackets HD vs MGUS / HD vs SMM / HD vs MM, stacked cleanly with adaptive spacing
     ymax = max([v.max() for v in data if len(v) > 0])
-    stat_df = pd.DataFrame(rows)
     bracket_order = {'MGUS': 1, 'SMM': 2, 'MM': 3}
     step = max(ymax * 0.18, 0.0025)
     for _, r in stat_df.iterrows():
@@ -232,24 +253,22 @@ def main():
         ax.plot([0, 0], [y - step * 0.18, y], 'k-', lw=1.0)
         ax.plot([x2, x2], [y - step * 0.18, y], 'k-', lw=1.0)
         qv = r['q_BH']
-        lbl = f'q={qv:.2f}' if qv >= 0.01 else f'q={qv:.3f}'
+        lbl = ps.stat('q', qv, digits=2 if qv >= 0.01 else 3)   # REVISION 2026-10-08
         ax.text((0 + x2) / 2.0, y + step * 0.10, lbl, ha='center', va='bottom', fontsize=9)
 
     ax.set_xticks(range(len(DISEASES)))
-    ax.set_xticklabels([f'{d}\n(n={len(by_d[d])})' for d in DISEASES], fontsize=11)
-    ax.set_ylabel('Mean TNFSF13 (APRIL) expression\nin BM myeloid cells [log-norm]',
+    ax.set_xticklabels([f'{d}\n($n$={len(by_d[d])})' for d in DISEASES], fontsize=11)
+    # REVISION 2026-10-08: italic gene symbol; values are ln(counts per 10,000 + 1).
+    ax.set_ylabel('Mean $\\mathbfit{TNFSF13}$ (APRIL) expression\nin BM myeloid cells [ln(CP10k+1)]',
                   fontsize=10, fontweight='bold')
     ax.set_title('BM myeloid APRIL (Zavidij GSE124310)', fontsize=11, fontweight='bold')
     ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
     # y-axis: pad above the highest bracket
     ax.set_ylim(-0.001, ymax + 4 * step)
     plt.tight_layout()
-    out_png = FIGURES_DIR / 'SupFig3A.png'
-    plt.savefig(out_png, dpi=300, bbox_inches='tight', facecolor='white')
-    plt.savefig(out_png.with_suffix('.pdf'), bbox_inches='tight', facecolor='white')
-    plt.savefig(out_png.with_suffix('.svg'), bbox_inches='tight', facecolor='white')
+    ps.save(fig, 'SupFig3A', FIGURES_DIR)   # REVISION 2026-10-08: transparent SVG
     plt.close()
-    print(f"\nSaved: {out_png} (+ .pdf, .svg)")
+
 
 if __name__ == '__main__':
     main()

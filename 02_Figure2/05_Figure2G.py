@@ -44,6 +44,10 @@ if FONT not in _avail:
 PLOT_FONT = FONT if FONT in _avail else ("Liberation Sans" if "Liberation Sans" in _avail else "sans-serif")
 plt.rcParams["font.family"] = PLOT_FONT
 plt.rcParams["svg.fonttype"] = "none"
+# REVISION 2026-10-08: math text ($q$, $n$) in the plot font, italic.
+plt.rcParams["mathtext.fontset"] = "custom"
+plt.rcParams["mathtext.rm"] = PLOT_FONT
+plt.rcParams["mathtext.it"] = f"{PLOT_FONT}:italic"
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -190,7 +194,7 @@ for protein in ["sBCMA", "APRIL", "BAFF"]:
         p=float(w_two.pvalue), median_delta=median_delta,
         median_fc_linear=median_fc_linear, n_up=n_up,
         display_effect=f"median fold-change = {median_fc_linear:.2f}x",
-        ylabel="Plasma NPX (Olink)",
+        ylabel="Plasma levels (Olink NPX)",
         is_protein=True,
     )
 
@@ -242,21 +246,22 @@ for ax, key in zip(axes, SUBPANELS):
     ax.plot([positions[0], positions[0]], [bar_y - 0.025*y_span, bar_y], color="black", linewidth=0.9)
     ax.plot([positions[1], positions[1]], [bar_y - 0.025*y_span, bar_y], color="black", linewidth=0.9)
     q_val = s["q"]
-    q_str = f"q = {q_val:.3f}" if q_val >= 0.001 else f"q = {q_val:.1e}"
+    q_str = f"$q$ = {q_val:.3f}" if q_val >= 0.001 else f"$q$ = {q_val:.1e}"
     # Only the q-value is annotated. The IMWG response categories were removed from the M-spike
     # panel and the fold-change from the protein panels; magnitude and direction are already
     # carried by the boxplots and the connector slopes.
     ax.text((positions[0] + positions[1]) / 2, bar_y + 0.05 * y_span, q_str,
-            ha="center", va="bottom", fontsize=12)
+            ha="center", va="bottom", fontsize=15)
 
     # Cosmetics
-    ax.set_title(GENE_LABELS[key], fontsize=14, loc="left", fontweight="bold", pad=4)
+    # REVISION 2026-10-08: larger text (was 14 / 13 / 13 / 12).
+    ax.set_title(GENE_LABELS[key], fontsize=16, loc="left", fontweight="bold", pad=4)
     ax.set_xticks(positions)
-    ax.set_xticklabels(["Pre-TEC", "Post-TEC"], fontsize=13)
-    ax.set_ylabel(s["ylabel"], fontsize=13)
+    ax.set_xticklabels(["Pre-TEC", "Post-TEC"], fontsize=15)
+    ax.set_ylabel(s["ylabel"], fontsize=15)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=12)
+    ax.tick_params(axis="both", labelsize=15)
     ax.set_ylim(ymin - 0.10*y_span, ymax + 0.40*y_span)
 
     if s["is_protein"]:
@@ -271,13 +276,15 @@ for ax, key in zip(axes, SUBPANELS):
               f"paired Wilcoxon p = {s['p']:.3g}, "
               f"BH q = {s['q']:.3g}")
 
-fig.suptitle("Pre vs post teclistamab paired measurements (Immuno-PRISM, high-risk SMM)",
-             fontsize=14, y=0.965)
+# REVISION 2026-10-08: title as used in the assembled figure, editable text, italic n.
+fig.suptitle("Pre vs post teclistamab plasma proteomics ($n$=10 SMM patients, Immuno-PRISM)",
+             fontsize=18, y=0.965)
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 
 for ext in ("png", "pdf", "svg"):
     out = FIGURES_DIR / f"Figure2G_PrePostTEC_4panels.{ext}"
-    plt.savefig(out, dpi=200, bbox_inches="tight")
+    # REVISION 2026-10-08: transparent SVG (no white background box in Inkscape).
+    plt.savefig(out, dpi=200, bbox_inches="tight", transparent=(ext == "svg"))
     if ext == "svg" and PLOT_FONT != FONT:
         # matplotlib records the family it actually resolved. Rewrite it to Arial: Liberation Sans
         # is metrically identical, so every glyph position already written stays correct, and the

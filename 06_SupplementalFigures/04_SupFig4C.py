@@ -52,7 +52,9 @@ def save_figure(basename, dpi=300):
     """Write PNG + PDF + SVG; rewrite the SVG font-family to Arial (see note above)."""
     for ext in ("png", "pdf", "svg"):
         out = FIGURES_DIR / f"{basename}.{ext}"
-        plt.savefig(out, dpi=dpi, bbox_inches="tight", facecolor="white")
+        # REVISION 2026-10-08: transparent SVG (no page-sized white box in Inkscape).
+        plt.savefig(out, dpi=dpi, bbox_inches="tight",
+                    **({"transparent": True} if ext == "svg" else {"facecolor": "white"}))
         if ext == "svg" and PLOT_FONT != FONT:
             t = Path(out).read_text(encoding="utf-8")
             for q in ('"', "'"):
@@ -62,8 +64,9 @@ def save_figure(basename, dpi=300):
         print(f"Saved: {out.name}")
 
 import matplotlib.patches as mpatches
-# No mathtext is used in this panel (see the JT label below); keep a sans fallback anyway.
-mpl.rcParams['mathtext.fontset'] = 'dejavusans'
+# REVISION 2026-10-08: italic statistical symbols through mathtext set in Arial by the shared
+# plot_style, which keeps the labels editable text (was: no mathtext, dejavusans fallback).
+import plot_style as ps
 
 np.random.seed(42)
 
@@ -184,7 +187,8 @@ print("counts per box (NBM, MGUS, SMM; non-malignant PCs):", [len(d) for d in da
 # between-stage gap ~2.2 -- enough room to keep "MGUS normal" / "MGUS malignant" tick labels
 # from colliding at the small panel size.
 pos = [1, 2, 3]
-tick_labels = [f"{lab}\nn={len(d)}" for lab, d in zip(labels, data)]
+# REVISION 2026-10-08: the healthy-marrow donors are labelled HD, as in the legend; italic n.
+tick_labels = [f"{'HD' if lab == 'NBM' else lab}\n$n$={len(d)}" for lab, d in zip(labels, data)]
 
 # Compact figure tuned for use as a single panel in a multi-panel figure: small physical size,
 # but fonts/strokes sized to survive scale-down. Within-stage gray brackets removed (all ns at
@@ -218,7 +222,7 @@ ax.set_ylim(ymin_data - 0.05 * yr, jt_norm_y + 0.18 * yr)
 
 def fmt_q(q):
     if np.isnan(q): return "n/a"
-    return f"q={q:.2f}" if q >= 0.01 else f"q={q:.1e}"
+    return ps.stat('q', q, digits=2, sci_below=0.01)   # REVISION 2026-10-08: 4.0×10^-3, not 4.0e-03
 
 def draw_bracket(x1, x2, y, label, color, lw=1.0, fontsize=11):
     h = 0.018 * yr
@@ -233,14 +237,14 @@ for (lbl, ia, ib), y in zip(norm_cross, norm_lvl):
 
 center_x = 2    # midpoint of the 3-box layout. Two-line JT label centered here.
 # JT normal PC line: prefix in normal weight, stat (z, p) bold on a second line.
-# Drawn as two plain text objects rather than mathtext: matplotlib renders mathtext as glyph
-# outlines in a separate math font, which would break the Arial setting and leave the label
-# uneditable in the SVG.
+# REVISION 2026-10-08: z and p in bold italic, a true minus sign, and p as a×10^b (the legend
+# reports p=2.3×10^-3). plot_style sets mathtext in Arial, so the label stays editable text.
 ax.text(center_x, jt_norm_y + 0.055 * yr,
-        "Jonckheere-Terpstra ordered trend (NBM → SMM)",
+        "Jonckheere-Terpstra ordered trend (HD → SMM)",
         ha='center', va='center', fontsize=11.5, fontweight='normal')
 ax.text(center_x, jt_norm_y - 0.055 * yr,
-        f"z = {z_n:.2f},  p = {p_n:.3g}",
+        f"{ps.sym('z', bold=True)} = {ps.num(z_n, bold=True)},  "
+        f"{ps.sym('p', bold=True)} = {ps.num(p_n, sci_below=0.01, bold=True)}",
         ha='center', va='center', fontsize=11.5, fontweight='bold')
 
 ax.set_title('Non-malignant BM plasma cells (Boiarsky GSE193531)',

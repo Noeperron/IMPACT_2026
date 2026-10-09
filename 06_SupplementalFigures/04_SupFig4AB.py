@@ -7,7 +7,7 @@ Purpose:      External validation of the 15-gene APRIL-responsive module in an i
 
 Inputs:       data/external/GSE173644_timecourse.txt.gz, which ships in the Zenodo deposit.
 
-Outputs:      figures/SupFig4AB.png, signature-score boxes by condition.
+Outputs:      figures/SupFig4AB.png (and PDF + SVG), heatmap and 120-min fold changes.
 
 Dependencies: Python + pandas, numpy, matplotlib, seaborn, scipy, statsmodels; reads config.py.
 """
@@ -27,6 +27,8 @@ from scipy import stats
 from statsmodels.stats.multitest import multipletests
 from matplotlib.patches import Patch
 
+# REVISION 2026-10-08: Arial with editable SVG text and italic symbols (shared plot_style).
+import plot_style as ps
 plt.rcParams.update({'pdf.fonttype': 42, 'ps.fonttype': 42, 'font.size': 11})
 
 # APRIL-responsive signature (15 genes)
@@ -122,21 +124,32 @@ fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(12, 6.5), gridspec_kw={'width_ra
 sns.heatmap(heatmap_z, annot=annot_mat.values, fmt='', cmap='RdBu_r', center=0,
             xticklabels=['0', '30', '60', '120', '360'], yticklabels=GENE_ORDER,
             linewidths=0.5, linecolor='white',
-            cbar_kws={'label': 'Z-score (VST)', 'shrink': 0.7, 'aspect': 30},
+            cbar_kws={'label': '$z$-score (VST)', 'shrink': 0.7, 'aspect': 30},
             ax=ax_a, annot_kws={'fontsize': 9, 'fontweight': 'bold'})
 ax_a.set_xlabel('Minutes post-APRIL stimulation', fontsize=12)
 ax_a.set_ylabel('')
-ax_a.set_title('A', fontsize=14, fontweight='bold', loc='left', pad=10)
+# REVISION 2026-10-08: boxed panel letters (the style of the assembled figures) and italic gene symbols.
+ax_a.set_title('A', fontsize=15, fontweight='normal', loc='left', pad=10,
+               bbox=dict(boxstyle='square,pad=0.35', facecolor='none', edgecolor='black', linewidth=1.0))
 ax_a.tick_params(axis='y', labelsize=10)
+for _t in ax_a.get_yticklabels():
+    _t.set_fontstyle('italic')
 
 ax_b.barh(range(len(res120_sorted)), res120_sorted['log2FC'], color=colors_bar,
           xerr=res120_sorted['se'], capsize=3, edgecolor='white', linewidth=0.5,
           error_kw={'linewidth': 1, 'color': '#555555'})
+# REVISION 2026-10-08: each donor's 120-min log2 fold change as a dot on its bar (n=4 donors).
+donor_fc = np.array([[tc.loc[g, f't120_D{d}'] - tc.loc[g, f't0_D{d}'] for d in range(1, 5)]
+                     for g in res120_sorted['gene']])
+for i, vals in enumerate(donor_fc):
+    ax_b.scatter(vals, i + np.linspace(-0.18, 0.18, len(vals)), s=14, facecolor='white',
+                 edgecolor='black', linewidth=0.7, zorder=4)
 ax_b.set_yticks(range(len(res120_sorted)))
-ax_b.set_yticklabels(res120_sorted['gene'], fontsize=10)
+ax_b.set_yticklabels(res120_sorted['gene'], fontsize=10, fontstyle='italic')
 ax_b.axvline(0, color='black', linewidth=0.8, zorder=0)
 ax_b.set_xlabel('Log$_2$ fold change (120 min vs baseline)', fontsize=12, labelpad=6)
-ax_b.set_title('B', fontsize=14, fontweight='bold', loc='left', pad=10)
+ax_b.set_title('B', fontsize=15, fontweight='normal', loc='left', pad=10,
+               bbox=dict(boxstyle='square,pad=0.35', facecolor='none', edgecolor='black', linewidth=1.0))
 ax_b.spines['top'].set_visible(False)
 ax_b.spines['right'].set_visible(False)
 
@@ -144,7 +157,11 @@ for i, (_, row) in enumerate(res120_sorted.iterrows()):
     padj = row['padj']
     star = '***' if padj < 0.001 else ('**' if padj < 0.01 else ('*' if padj < 0.05 else 'ns'))
     color = 'black' if star != 'ns' else '#999999'
-    xpos = row['log2FC'] + (row['se'] + 0.04 if row['log2FC'] >= 0 else -row['se'] - 0.04)
+    # REVISION 2026-10-08: stars sit beyond the error bar and the donor dots.
+    if row['log2FC'] >= 0:
+        xpos = max(row['log2FC'] + row['se'], donor_fc[i].max()) + 0.04
+    else:
+        xpos = min(row['log2FC'] - row['se'], donor_fc[i].min()) - 0.04
     ha = 'left' if row['log2FC'] >= 0 else 'right'
     ax_b.text(xpos, i, star, va='center', ha=ha, fontsize=9, fontweight='bold', color=color)
 
@@ -153,12 +170,11 @@ elements.append(Patch(facecolor='#CCCCCC', edgecolor='black', linewidth=0.5, lab
 ax_b.legend(handles=elements, fontsize=8, framealpha=0.95, edgecolor='#CCCCCC',
             loc='lower right', handlelength=1.2, handletextpad=0.5)
 
-fig.text(0.5, 0.98, 'Validation of APRIL-responsive gene signature (GSE173644, n=4 donors)',
+fig.text(0.5, 0.98, 'Validation of APRIL-responsive gene signature (GSE173644, ' + ps.sym('n', bold=True) + '=4 donors)',
          ha='center', fontsize=13, fontweight='bold')
-fig.text(0.5, 0.955, f'{n_sig}/15 genes significantly upregulated at 120 min (paired t-test, FDR < 0.05)',
+fig.text(0.5, 0.955, f'{n_sig}/15 genes significantly upregulated at 120 min (paired $t$-test, FDR < 0.05)',
          ha='center', fontsize=10, color='#555555')
 
 plt.tight_layout(rect=[0, 0, 1, 0.94])
-plt.savefig(FIGURES_DIR / "SupFig4AB.png", dpi=300, bbox_inches='tight', facecolor='white')
+ps.save(fig, "SupFig4AB", FIGURES_DIR)   # REVISION 2026-10-08: vector PDF and SVG as well as PNG
 plt.close()
-print("Saved: SupFig4AB.png")

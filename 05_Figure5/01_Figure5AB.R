@@ -48,8 +48,9 @@ counts <- counts %>% distinct(Var2, Var3, .keep_all = TRUE)
 counts$matchname <- paste0(counts$Var2, "_", counts$Var3)
 master_paired$matchname <- paste0(master_paired$Diagnosis, "_", master_paired$Cytokine)
 # Display label: "Healthy" is shown as HD throughout the figure.
-counts$n_ind <- paste0(ifelse(counts$Var2 == "Healthy", "HD", as.character(counts$Var2)),
-                       "\n (n=", counts$Freq, ")")
+# REVISION 2026-10-08: facet titles are plotmath expressions so that n is italic.
+counts$n_ind <- paste0("atop('", ifelse(counts$Var2 == "Healthy", "HD", as.character(counts$Var2)),
+                       "', '('*italic(n)*'=", counts$Freq, ")')")
 master_paired$n_ind <- counts$n_ind[match(master_paired$matchname, counts$matchname)]
 
 # Panel-wide multiple-testing family.
@@ -102,14 +103,19 @@ plot_cytokine <- function(cyto_name, paired_data) {
           panel.background = element_blank(),
           axis.line = element_line(colour = "black"),
           panel.border = element_rect(fill = NA, color = "black"),
-          axis.text = element_text(size = 16, color = "black", family = FONT),
-          axis.title = element_text(size = 18, color = "black", family = FONT),
-          strip.text = element_text(size = 18, face = "plain", family = FONT),
+          # REVISION 2026-10-08: larger text (was 16 / 18 / 18), identical in Figure 5C.
+          axis.text = element_text(size = 18, color = "black", family = FONT),
+          # one-line y-axis titles: 15 pt is the largest size at which the longest title
+          # ("DDX58 plasma levels (Olink)") fits the axis height
+          axis.title = element_text(size = 15, color = "black", family = FONT),
+          strip.text = element_text(size = 20, face = "plain", family = FONT),
+          axis.title.x = element_blank(),
           strip.background = element_blank()) +
     scale_y_continuous(expand = expansion(mult = c(0.05, 0.15))) +
     scale_x_discrete(breaks = c(1, 2), labels = c("Pre", "Post")) +
-    facet_wrap(. ~ n_ind) +
-    ylab(paste0(y_label, " (NPX)")) + xlab("")
+    facet_wrap(. ~ n_ind, labeller = label_parsed) +
+    # REVISION 2026-10-08: values are Olink plasma levels (linear scale), not NPX.
+    ylab(paste0(y_label, " plasma levels (Olink)")) + xlab("")
 
   # Paired Wilcoxon signed-rank test per disease group. The q-value is NOT corrected
   # here: it is looked up from PANEL_Q, the panel-wide BH family of 156 tests.
@@ -134,18 +140,22 @@ plot_cytokine <- function(cyto_name, paired_data) {
     left_join(eff %>% select(n_ind, effsize), by = "n_ind") %>%
     mutate(
       q_num = signif(p.adj, 2),
-      q_fmt = paste0("q=", q_num),
+      # REVISION 2026-10-08: plotmath labels so that q and r are italic, numbers roman.
+      q_fmt = paste0("italic(q)*'=", q_num, "'"),
       bracket_label = ifelse(q_num < 0.1,
-                             paste0(q_fmt, ", r=", round(abs(effsize), 2)),
+                             paste0(q_fmt, "*', '*italic(r)*'=", round(abs(effsize), 2), "'"),
                              q_fmt))
 
   # JT subtitle removed per user instruction; the figure now shows
   # only the per-disease paired Wilcoxon q (with effect size r when q<0.1). Bracket label
   # text color forced to black (was gray under ggpubr default).
   final <- p +
-    stat_pvalue_manual(stat.test, label = "bracket_label", family = FONT,
-                       tip.length = 0.02, bracket.nudge.y = 1, size = 3.6,
-                       color = "black", inherit.aes = FALSE) +
+    # REVISION 2026-10-08: geom_bracket() directly, because stat_pvalue_manual() does not pass
+    # type = "expression" through and the plotmath labels would print as raw text.
+    geom_bracket(data = stat.test, aes(xmin = xmin, xmax = xmax, y.position = y.position,
+                                       label = bracket_label),
+                 type = "expression", family = FONT, tip.length = 0.02, bracket.nudge.y = 1,
+                 label.size = 4.6, size = 0.3, color = "black", inherit.aes = FALSE) +
     coord_cartesian(clip = "off") +
     theme(panel.spacing.x = unit(0.4, "lines"),
           plot.margin = margin(8, 12, 4, 4)) +

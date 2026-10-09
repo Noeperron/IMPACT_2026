@@ -81,7 +81,8 @@ stat_ship <- smm_ship_paired %>%
 # which mislabelled the post-vaccination not-shipped group as n=5 when it is n=6.
 shipment_counts <- smm_ship_paired %>%
   count(VaccineTimepoint, Shipping_Status) %>%
-  mutate(n_label = paste0("n=", n))
+  # REVISION 2026-10-08: plotmath label so that n is italic.
+  mutate(n_label = paste0("italic(n)*'=", n, "'"))
 
 timepoint_labels <- c("1" = "Pre-Vx", "2" = "Post-Vx")
 
@@ -97,14 +98,19 @@ p_ship <- smm_ship_paired %>%
                   position = position_jitter(width = 0.2),
                   shape = 21, show.legend = FALSE) +
   scale_fill_manual(values = c("steelblue", "tomato2")) +
-  scale_x_discrete(labels = c("1" = "Shipped", "2" = "Not Shipped")) +
+  scale_x_discrete(labels = c("1" = "Shipped", "2" = "Not shipped")) +
   # drawn as a layer rather than baked into the axis labels, so each facet shows its own n
   geom_text(data = shipment_counts,
             aes(x = Shipping_Status, y = -Inf, label = n_label),
-            inherit.aes = FALSE, vjust = -0.9, size = 3.9, family = FONT) +
+            inherit.aes = FALSE, vjust = -0.9, size = 3.9, family = FONT, parse = TRUE) +
   facet_grid(~ VaccineTimepoint, scales = "free",
              labeller = labeller(VaccineTimepoint = timepoint_labels)) +
-  stat_pvalue_manual(stat_ship, label = "p = {p}", hide.ns = FALSE) +
+  # REVISION 2026-10-08: geom_bracket() with a plotmath label so that p is italic;
+  # stat_pvalue_manual() does not pass type = "expression" through (see 01_Figure5AB.R).
+  geom_bracket(data = stat_ship %>% mutate(p_label = paste0("italic(p)*' = ", p, "'")),
+               aes(xmin = group1, xmax = group2, y.position = y.position, label = p_label),
+               type = "expression", family = FONT, tip.length = 0.03, label.size = 3.88,
+               inherit.aes = FALSE) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black", size = 11, family = FONT),
         axis.text.y = element_text(color = "black", size = 12, family = FONT),

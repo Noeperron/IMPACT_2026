@@ -46,6 +46,8 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+# REVISION 2026-10-08: italic statistical symbols, a×10^b instead of e-notation, transparent SVG.
+import plot_style as ps
 from scipy import stats
 import statsmodels.formula.api as smf
 from statsmodels.stats.multitest import multipletests
@@ -135,7 +137,8 @@ def adjusted_q_vs_hd(df, value_col, group_col, ref='HD'):
 
 def fmt_p(p):
     if pd.isna(p): return 'NA'
-    return f"{p:.1e}" if p < 0.001 else f"{p:.3f}"
+    # REVISION 2026-10-08: 3.9×10^-4 instead of 3.9e-04.
+    return ps.num(p, digits=3, sci_below=0.001, sig=2)
 
 def draw_bracket(ax, x1, x2, y, label, tip_frac=0.012, fontsize=7.2, linewidth=0.6,
                   text_x=None):
@@ -195,9 +198,9 @@ for col, (lbl, r, title) in enumerate(tier_results):
     ax.set_xticks(range(len(TIER_ORDER)))
     xlab = []
     for t in TIER_ORDER:
-        xlab.append(f"{TIER_LABELS[t]}\n(n={r['counts'][t]})")
+        xlab.append(f"{TIER_LABELS[t]}\n($n$={r['counts'][t]})")
     ax.set_xticklabels(xlab, fontsize=8.5, rotation=30, ha='right')
-    if col == 0: ax.set_ylabel('Spike IgG titer (OD$_{450-570}$)', fontsize=10)
+    if col == 0: ax.set_ylabel(r'Spike IgG titer (OD$_{\mathrm{450–570}}$)', fontsize=10)
     ax.set_title(title, fontsize=10.5, fontweight='bold', pad=6)
     ax.spines[['top','right']].set_visible(False)
 
@@ -208,10 +211,10 @@ for col, (lbl, r, title) in enumerate(tier_results):
     for k, g in enumerate(['MGUS','LRSMM','IRSMM','HRSMM','MM']):
         if g not in r['q']: continue
         y = y_top + (k + 1) * step
-        draw_bracket(ax, 0, k + 1, y, f"q={fmt_p(r['q'][g])}", fontsize=9.0)
+        draw_bracket(ax, 0, k + 1, y, f"$q$={fmt_p(r['q'][g])}", fontsize=9.0)
     jt_y = y_top + 6.4 * step
     draw_bracket(ax, 0, 4, jt_y,
-                 f"Jonckheere-Terpstra (HD→HR-SMM, age+sex-adj):\nz={r['jt_z']:.2f}, p={fmt_p(r['jt_p'])}",
+                 f"Jonckheere-Terpstra (HD→HR-SMM, age+sex-adj):\n$z$={ps.num(r['jt_z'])}, $p$={fmt_p(r['jt_p'])}",
                  fontsize=9.0, text_x=2.5)
     ax.set_ylim(top=jt_y + 3.2 * step)
 
@@ -224,9 +227,7 @@ fig.suptitle('Vaccine response by SMM 20/2/20 risk tier, treatment-naive SMM onl
              fontsize=11.5, fontweight='bold', y=0.96)
 
 OUT_PNG = FIGURES_DIR / 'SupFig1.png'
-plt.savefig(OUT_PNG, dpi=300, bbox_inches='tight')
-plt.savefig(str(OUT_PNG).replace('.png','.pdf'), bbox_inches='tight')
-plt.savefig(str(OUT_PNG).replace('.png','.svg'), bbox_inches='tight')
+ps.save(fig, 'SupFig1', FIGURES_DIR)   # REVISION 2026-10-08: transparent SVG, editable Arial text
 print(f"\nSaved: {OUT_PNG}")
 
 # Console dump ---

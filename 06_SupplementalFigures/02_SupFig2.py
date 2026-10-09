@@ -44,11 +44,16 @@ plt.rcParams['font.family'] = PLOT_FONT
 plt.rcParams['font.size'] = 8
 plt.rcParams['svg.fonttype'] = 'none'
 
+# REVISION 2026-10-08: italic statistical symbols, a×10^b instead of e-notation, transparent SVG.
+import plot_style as ps
+
 
 def save_figure(basename, dpi=300):
     for ext in ("png", "pdf", "svg"):
         out = FIGURES_DIR / f"{basename}.{ext}"
-        plt.savefig(out, dpi=dpi, bbox_inches='tight', facecolor='white')
+        # REVISION 2026-10-08: transparent SVG (no page-sized white box in Inkscape).
+        plt.savefig(out, dpi=dpi, bbox_inches="tight",
+                    **({"transparent": True} if ext == "svg" else {"facecolor": "white"}))
         if ext == "svg" and PLOT_FONT != FONT:
             s = Path(out).read_text(encoding="utf-8")
             for q in ('"', "'"):
@@ -234,7 +239,7 @@ def plot_umap_to_ax(ax, umap_coords, annotations, cell_types, title, show_axes=T
                    ha='center', va='center', color='black',
                    path_effects=[withStroke(linewidth=2, foreground='white')])
 
-    ax.set_title(f'{title} (n={len(annotations):,})', fontsize=7, fontweight='bold', pad=2)
+    ax.set_title(f'{title} ({ps.sym("n", bold=True)}={len(annotations):,})', fontsize=7, fontweight='bold', pad=2)
     if show_axes:
         ax.set_xlabel('UMAP1', fontsize=5, labelpad=1)
         ax.set_ylabel('UMAP2', fontsize=5, labelpad=1)
@@ -287,7 +292,7 @@ def plot_heatmap_to_ax(ax, cell_barcodes, annotations, cell_types, markers, scal
 
     cbar = plt.colorbar(im, ax=ax, shrink=0.5, pad=0.01, aspect=15)
     cbar.ax.tick_params(labelsize=6)
-    cbar.set_label('Z-score', fontsize=6, labelpad=1)
+    cbar.set_label('$z$-score', fontsize=6, labelpad=1)
 
 
 def load_lineage_data(lineage_name, config):
@@ -323,6 +328,8 @@ def main():
         ax_umap = fig.add_subplot(gs[row, 0])
         plot_umap_to_ax(ax_umap, data['umap_coords'], data['annotations'].values,
                        config['cell_types'], config['title'], show_axes=False)
+        # REVISION 2026-10-08: panel letters A-E, which the legend refers to.
+        ps.panel_letter(fig, 0.004, ax_umap.get_position().y1 + 0.006, 'ABCDE'[row], fontsize=10)
 
         ax_heatmap = fig.add_subplot(gs[row, 1])
         plot_heatmap_to_ax(ax_heatmap, data['valid_cells'], data['annotations'],
